@@ -36,6 +36,18 @@ function isDecisionCard(c: Record<string, unknown>): boolean {
   return c.kind === "decision" || (!c.kind && typeof c.title === "string" && !Array.isArray(c.items));
 }
 
+function clipSnippet(raw: string, maxLines = 6): string {
+  return raw
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.replace(/^[-+]\s?/, "").replace(/^@@.*@@\s?/, ""))
+    .map((line) => line.trimEnd())
+    .filter((line) => line.trim().length > 0 && !line.startsWith("---") && !line.startsWith("+++"))
+    .slice(0, maxLines)
+    .join("\n")
+    .trim();
+}
+
 function normalizeCards(raw: unknown): ReviewCard[] {
   if (!raw || typeof raw !== "object") {
     throw new Error("Model response was not a JSON object");
@@ -71,6 +83,14 @@ function normalizeCards(raw: unknown): ReviewCard[] {
         riskRaw === "low" || riskRaw === "high" || riskRaw === "medium"
           ? riskRaw
           : "medium";
+      const snippetRaw =
+        typeof c.code_snippet === "string"
+          ? c.code_snippet
+          : typeof c.snippet === "string"
+            ? c.snippet
+            : typeof c.patch === "string"
+              ? c.patch
+              : "";
       const card: DecisionCard = {
         id,
         kind: "decision",
@@ -84,6 +104,7 @@ function normalizeCards(raw: unknown): ReviewCard[] {
           typeof c.diagram === "string" && c.diagram.trim()
             ? c.diagram.trim()
             : null,
+        code_snippet: snippetRaw.trim() ? clipSnippet(snippetRaw, 6) : null,
         patch:
           typeof c.patch === "string" && c.patch.trim() ? c.patch.trim() : null,
       };
@@ -116,27 +137,43 @@ function attachPatchesFromFiles(
   return cards.map((card) => {
     if (card.kind !== "decision") return card;
 
-    if (card.patch?.trim()) {
-      return { ...card, patch: clipPatch(card.patch.trim(), 40, 2200) };
-    }
+    let next: DecisionCard = { ...card };
 
-    const snippets: string[] = [];
-    for (const path of card.files.slice(0, 3)) {
-      const patch = byFile.get(path);
-      if (patch) {
-        snippets.push(`--- ${path}\n${clipPatch(patch)}`);
-      }
-    }
-    if (!snippets.length) {
-      for (const f of files) {
-        if (f.patch) {
-          snippets.push(`--- ${f.filename}\n${clipPatch(f.patch)}`);
-          break;
+    if (next.patch?.trim()) {
+      next = { ...next, patch: clipPatch(next.patch.trim(), 40, 2200) };
+    } else {
+      const snippets: string[] = [];
+      for (const path of card.files.slice(0, 3)) {
+        const patch = byFile.get(path);
+        if (patch) {
+          snippets.push(`--- ${path}\n${clipPatch(patch)}`);
         }
       }
+      if (!snippets.length) {
+        for (const f of files) {
+          if (f.patch) {
+            snippets.push(`--- ${f.filename}\n${clipPatch(f.patch)}`);
+            break;
+          }
+        }
+      }
+      if (snippets.length) {
+        next = { ...next, patch: snippets.join("\n\n").slice(0, 2800) };
+      }
     }
-    if (!snippets.length) return card;
-    return { ...card, patch: snippets.join("\n\n").slice(0, 2800) };
+
+    // If the model omitted code_snippet, pull a tiny proof line from the patch.
+    if (!next.code_snippet?.trim()) {
+      const source =
+        (next.files[0] && byFile.get(next.files[0])) ||
+        files.find((f) => f.patch)?.patch ||
+        next.patch ||
+        "";
+      const clipped = clipSnippet(source, 6);
+      if (clipped) next = { ...next, code_snippet: clipped };
+    }
+
+    return next;
   });
 }
 

@@ -14,6 +14,8 @@ export interface DecisionCard {
   risk_reason: string;
   files: string[];
   diagram: string | null;
+  /** Tiny proof snippet shown on the card body (≤ 6 lines). */
+  code_snippet?: string | null;
   patch?: string | null;
 }
 

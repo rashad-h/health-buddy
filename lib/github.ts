@@ -67,8 +67,8 @@ export function resolveRepo(params?: {
 }): RepoRef {
   const owner = params?.owner?.trim() || DEFAULT_REPO.owner;
   const repo = params?.repo?.trim() || DEFAULT_REPO.repo;
-  const allowed = DEMO_TARGETS.some((t) => t.owner === owner && t.repo === repo);
-  if (!allowed) {
+  const allowedRepos = new Set(["ExpenseTracker", "health-buddy"]);
+  if (owner !== "rashad-h" || !allowedRepos.has(repo)) {
     throw new Error(`Repo ${owner}/${repo} is not in the demo catalog`);
   }
   return { owner, repo };
@@ -136,10 +136,44 @@ export async function listPulls(params?: {
   });
 }
 
-/** Fetch the hardcoded demo PR catalog (both repos). Always mark as open. */
+/** Fetch the hardcoded demo PR catalog + all open ExpenseTracker PRs. Always mark as open. */
 export async function listDemoPulls() {
+  const octokit = getOctokit();
+
+  // Always include pinned targets, plus any currently-open ExpenseTracker PRs
+  // so a newly opened flow-heavy demo PR appears without a code change.
+  let openExpense: Array<{ number: number }> = [];
+  try {
+    openExpense = await octokit.paginate(octokit.pulls.list, {
+      owner: "rashad-h",
+      repo: "ExpenseTracker",
+      state: "open",
+      sort: "updated",
+      direction: "desc",
+      per_page: 20,
+    });
+  } catch {
+    openExpense = [];
+  }
+
+  const targets = new Map<string, RepoRef & { number: number; label: string }>();
+  for (const t of DEMO_TARGETS) {
+    targets.set(`${t.owner}/${t.repo}#${t.number}`, t);
+  }
+  for (const pull of openExpense) {
+    const key = `rashad-h/ExpenseTracker#${pull.number}`;
+    if (!targets.has(key)) {
+      targets.set(key, {
+        owner: "rashad-h",
+        repo: "ExpenseTracker",
+        number: pull.number,
+        label: "ExpenseTracker",
+      });
+    }
+  }
+
   const results = await Promise.all(
-    DEMO_TARGETS.map(async (target) => {
+    Array.from(targets.values()).map(async (target) => {
       try {
         const pull = await getPR(target.number, {
           owner: target.owner,
