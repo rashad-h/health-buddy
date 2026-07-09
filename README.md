@@ -2,9 +2,19 @@
 
 **Code review, rebuilt for a phone.**
 
-Open a pull request. Get a stack of decision cards — plain English, risk, a tiny code proof, and a flow diagram when it matters. Swipe right to ship. Swipe left to hold and speak your objection. One tap posts a real GitHub review.
-
 **Live demo →** [open the app](https://health-buddy-taupe.vercel.app)
+
+---
+
+## Summary
+
+Swipe-to-Ship turns a GitHub pull request into **high-level decision cards** you can review on your phone — small visual chunks instead of an endless diff.
+
+Each card explains one meaningful change in plain English, with risk, a tiny code proof (≤6 lines), and a Mermaid flow diagram when the path changes. Trivial noise (renames, formatting, lockfiles) collapses into a single housekeeping card.
+
+Swipe **right to ship**, **left to hold**. On hold, speak your objection — voice becomes a polished review comment. When the deck is done, one tap posts a real GitHub review (`COMMENT` or `REQUEST_CHANGES`). The app never merges, never approves, and never changes code.
+
+Built for remote / on-the-go review: judgment first, laptop optional.
 
 ---
 
