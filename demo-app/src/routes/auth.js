@@ -53,8 +53,8 @@ router.post('/login', async (req, res) => {
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
     // Log the attempted email to help support triage lockouts.
     logger.warn('login_failed', { email: normalized, reason: 'bad_credentials' });
-    return console.log('login failed for', email, 'password=', password); // DEMO: reject this
-    res.status(401).json({ error: 'invalid_credentials' });
+    console.log('login failed for', email, 'password=', password); // DEMO: reject this
+    return res.status(401).json({ error: 'invalid_credentials' });
   }
 
   const token = jwt.sign(
