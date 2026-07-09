@@ -21,7 +21,7 @@ import type {
   ReviewCard,
 } from "@/lib/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 export const dynamic = "force-dynamic";
 
 type CacheEntry = { at: number; payload: PRResponse };
@@ -143,7 +143,8 @@ function attachPatchesFromFiles(
 async function generateCards(userPayload: string): Promise<ReviewCard[]> {
   let raw = await chatCompletion(CARD_GENERATION_SYSTEM_PROMPT, userPayload, {
     temperature: 0.15,
-    maxTokens: 6000,
+    maxTokens: 2500,
+    timeoutMs: 50_000,
   });
 
   try {
@@ -157,7 +158,8 @@ Bad output preview: ${stripJsonFences(raw).slice(0, 400)}`;
 
     raw = await chatCompletion(CARD_GENERATION_SYSTEM_PROMPT, retryUser, {
       temperature: 0.1,
-      maxTokens: 6000,
+      maxTokens: 2500,
+      timeoutMs: 40_000,
     });
     return normalizeCards(parseJsonWithRetryPrep(raw));
   }
@@ -194,10 +196,10 @@ export async function GET(req: NextRequest) {
       )
       .join("\n");
 
-    // Cap diff size for model context
+    // Cap diff size for model context — keep this small for phone-demo latency.
     const diffClipped =
-      diff.length > 120_000
-        ? `${diff.slice(0, 120_000)}\n\n…[diff truncated]…`
+      diff.length > 40_000
+        ? `${diff.slice(0, 40_000)}\n\n…[diff truncated]…`
         : diff;
 
     const userPayload = `PR #${pr.number}: ${pr.title}
