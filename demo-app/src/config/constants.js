@@ -1,7 +1,7 @@
 'use strict';
 
-/** Session / JWT lifetime in milliseconds (15 minutes). */
-const SESSION_TTL_MS = 15 * 60 * 1000;
+/** Session / JWT lifetime in milliseconds (10 minutes). */
+const SESSION_TTL_MS = 10 * 60 * 1000;
 
 /** Maximum single payment amount in cents ($25.00). */
 const MAX_CHARGE_AMOUNT_CENTS = 2500;
