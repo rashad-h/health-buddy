@@ -10,7 +10,7 @@
 
 Swipe-to-Ship turns a GitHub pull request into **high-level decision cards** you can review on your phone — small visual chunks instead of an endless diff.
 
-Each card explains one meaningful change in plain English, with risk, a tiny code proof (≤6 lines), and a Mermaid flow diagram when the path changes. Trivial noise (renames, formatting, lockfiles) collapses into a single housekeeping card.
+Each card explains one meaningful change in plain English, with risk, a tiny code proof (≤6 lines), and a flow diagram when it helps. Trivial noise (renames, formatting, lockfiles) collapses into a single housekeeping card.
 
 Swipe **right to ship**, **left to hold**. On hold, speak your objection — voice becomes a polished review comment. When the deck is done, one tap posts a real GitHub review (`COMMENT` or `REQUEST_CHANGES`). The app never merges, never approves, and never changes code.
 
@@ -38,13 +38,13 @@ No merge. No approve. No code changes from the app — comments only.
 | Plain-English title + summary | The *decision*, not the filename |
 | Why it matters + risk | Consequence, not churn |
 | Key change (≤6 lines) | Proof of the point |
-| Mermaid flow | Before → after when the path changes |
+| Flow diagram | Before → after when it helps |
 
 Trivial renames, formatting, and lockfile noise collapse into a single housekeeping card.
 
 ## Stack
 
-Next.js · TypeScript · Tailwind · framer-motion · Mermaid · OpenRouter (`deepseek/deepseek-v4-flash`) · GitHub REST (Octokit) · Web Speech API
+Next.js · TypeScript · Tailwind · framer-motion · OpenRouter (`deepseek/deepseek-v4-flash`) · GitHub REST (Octokit) · Web Speech API
 
 ## Safety
 
