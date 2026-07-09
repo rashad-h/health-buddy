@@ -67,7 +67,11 @@ export async function GET(req: NextRequest) {
       prs,
     };
 
-    return NextResponse.json(payload);
+    return NextResponse.json(payload, {
+      headers: {
+        "Cache-Control": "no-store, max-age=0",
+      },
+    });
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to list pull requests";

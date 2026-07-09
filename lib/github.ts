@@ -47,15 +47,50 @@ export async function listPulls(params?: {
 }) {
   const octokit = getOctokit();
   const { owner, repo } = getRepoCoords();
-  const { data } = await octokit.pulls.list({
+  const state = params?.state ?? "all";
+  const perPage = params?.perPage ?? 30;
+
+  // Fetch open + closed separately and merge. A single state=all call can
+  // miss very recent PRs with some fine-grained tokens / API edge cases.
+  if (state === "all") {
+    const [open, closed] = await Promise.all([
+      octokit.paginate(octokit.pulls.list, {
+        owner,
+        repo,
+        state: "open",
+        sort: "updated",
+        direction: "desc",
+        per_page: perPage,
+      }),
+      octokit.paginate(octokit.pulls.list, {
+        owner,
+        repo,
+        state: "closed",
+        sort: "updated",
+        direction: "desc",
+        per_page: perPage,
+      }),
+    ]);
+    const byNumber = new Map<number, (typeof open)[number]>();
+    for (const pull of [...open, ...closed]) {
+      byNumber.set(pull.number, pull);
+    }
+    return Array.from(byNumber.values())
+      .sort(
+        (a, b) =>
+          new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      )
+      .slice(0, perPage);
+  }
+
+  return octokit.paginate(octokit.pulls.list, {
     owner,
     repo,
-    state: params?.state ?? "open",
+    state,
     sort: "updated",
     direction: "desc",
-    per_page: params?.perPage ?? 30,
+    per_page: perPage,
   });
-  return data;
 }
 
 export async function getDiff(prNumber: number): Promise<string> {
