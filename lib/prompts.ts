@@ -19,7 +19,13 @@ Rules:
    - At least 2 decision cards MUST include a non-null "diagram".
    - Prefer sequenceDiagram or graph LR showing before→after flow, auth path, request pipeline, or data path.
    - Even small constant/threshold changes can get a tiny before/after graph when it clarifies impact.
-   - ≤ 8 nodes. Valid Mermaid only: no parentheses or special characters inside node labels; use simple alphanumeric IDs like A, B, TokenOld, TokenNew.
+   - ≤ 8 nodes.
+   - CRITICAL Mermaid validity rules:
+     * Node labels: letters/numbers/spaces only. NO parentheses, braces, commas, colons, quotes, or < > inside labels.
+     * Use IDs like A, B, Auth, TokenNew — then A[Session 15 min] not A[Session (15 min)].
+     * Edge labels: short words only, e.g. -->|ok| or -->|reject| — no expressions like x < 50.
+     * sequenceDiagram messages: plain words after the colon, no (), {}, or code.
+     * Never wrap the diagram in markdown fences.
 6. Output ONLY the JSON object. No prose, no markdown fences.
 
 Also include on every card: "id" (short unique string) and "kind" ("decision" or "housekeeping"). Housekeeping cards do not need code_snippet or diagram.`;
