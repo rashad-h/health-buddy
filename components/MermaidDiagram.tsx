@@ -18,8 +18,22 @@ export default function MermaidDiagram({ chart }: { chart: string }) {
         mermaid.initialize({
           startOnLoad: false,
           securityLevel: "strict",
-          theme: "neutral",
+          theme: "base",
           fontFamily: "Inter, sans-serif",
+          themeVariables: {
+            primaryColor: "#E8F3EF",
+            primaryTextColor: "#101312",
+            primaryBorderColor: "#0E5B4A",
+            lineColor: "#0E5B4A",
+            secondaryColor: "#FAFAF7",
+            tertiaryColor: "#FFFFFF",
+            background: "#FAFAF7",
+            mainBkg: "#E8F3EF",
+            nodeBorder: "#0E5B4A",
+            clusterBkg: "#FAFAF7",
+            titleColor: "#101312",
+            edgeLabelBackground: "#FAFAF7",
+          },
         });
         const { svg } = await mermaid.render(`mmd-${id}`, chart);
         if (!cancelled && containerRef.current) {

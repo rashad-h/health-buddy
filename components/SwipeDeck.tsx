@@ -218,6 +218,18 @@ export default function SwipeDeck({
             {card.kind === "decision" ? (
               <>
                 <p className="text-sm leading-relaxed text-ink/75">{card.summary}</p>
+
+                {card.code_snippet && (
+                  <div className="rounded-xl border border-accent/20 bg-ink/[0.03] overflow-hidden">
+                    <div className="px-3 py-1.5 border-b border-border/80 text-[10px] uppercase tracking-wider font-mono text-accent/80">
+                      Key change
+                    </div>
+                    <pre className="px-3 py-2 text-[11px] leading-relaxed font-mono text-ink/85 whitespace-pre-wrap break-words">
+                      {card.code_snippet}
+                    </pre>
+                  </div>
+                )}
+
                 <p className="text-sm text-ink/90">
                   <span className="font-medium text-accent">Why it matters: </span>
                   {card.why_it_matters}
@@ -236,7 +248,14 @@ export default function SwipeDeck({
                     {card.files.length > 6 && <li>+{card.files.length - 6} more</li>}
                   </ul>
                 )}
-                {card.diagram && <MermaidDiagram chart={card.diagram} />}
+                {card.diagram ? (
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] uppercase tracking-wider font-mono text-ink/45">
+                      Flow
+                    </p>
+                    <MermaidDiagram chart={card.diagram} />
+                  </div>
+                ) : null}
                 {card.patch && (
                   <div>
                     <button
