@@ -10,31 +10,73 @@ export class PRNumberError extends Error {
   }
 }
 
-/** Hardcoded review target — this app is hosted in health-buddy but always reviews ExpenseTracker. */
-const GITHUB_OWNER = "rashad-h";
-const GITHUB_REPO = "ExpenseTracker";
+export type RepoRef = { owner: string; repo: string };
 
-function getConfig() {
+/** Hardcoded demo catalog — always shown as open in the dashboard. */
+export const DEMO_TARGETS: Array<RepoRef & { number: number; label: string }> = [
+  {
+    owner: "rashad-h",
+    repo: "ExpenseTracker",
+    number: 1,
+    label: "ExpenseTracker",
+  },
+  {
+    owner: "rashad-h",
+    repo: "ExpenseTracker",
+    number: 2,
+    label: "ExpenseTracker",
+  },
+  {
+    owner: "rashad-h",
+    repo: "health-buddy",
+    number: 3,
+    label: "health-buddy",
+  },
+  {
+    owner: "rashad-h",
+    repo: "health-buddy",
+    number: 4,
+    label: "health-buddy",
+  },
+];
+
+const DEFAULT_REPO: RepoRef = {
+  owner: "rashad-h",
+  repo: "ExpenseTracker",
+};
+
+function getToken(): string {
   const token = process.env.GITHUB_TOKEN;
   if (!token) {
     throw new Error("GITHUB_TOKEN is not configured");
   }
-  return { token, owner: GITHUB_OWNER, repo: GITHUB_REPO };
+  return token;
 }
 
 export function getOctokit(): Octokit {
-  const { token } = getConfig();
-  return new Octokit({ auth: token });
+  return new Octokit({ auth: getToken() });
 }
 
-export function getRepoCoords() {
-  const { owner, repo } = getConfig();
+export function getRepoCoords(): RepoRef {
+  return DEFAULT_REPO;
+}
+
+export function resolveRepo(params?: {
+  owner?: string | null;
+  repo?: string | null;
+}): RepoRef {
+  const owner = params?.owner?.trim() || DEFAULT_REPO.owner;
+  const repo = params?.repo?.trim() || DEFAULT_REPO.repo;
+  const allowed = DEMO_TARGETS.some((t) => t.owner === owner && t.repo === repo);
+  if (!allowed) {
+    throw new Error(`Repo ${owner}/${repo} is not in the demo catalog`);
+  }
   return { owner, repo };
 }
 
-export async function getPR(prNumber: number) {
+export async function getPR(prNumber: number, coords?: RepoRef) {
   const octokit = getOctokit();
-  const { owner, repo } = getRepoCoords();
+  const { owner, repo } = coords ?? getRepoCoords();
   const { data } = await octokit.pulls.get({
     owner,
     repo,
@@ -46,14 +88,13 @@ export async function getPR(prNumber: number) {
 export async function listPulls(params?: {
   state?: PullRequestState;
   perPage?: number;
+  coords?: RepoRef;
 }) {
   const octokit = getOctokit();
-  const { owner, repo } = getRepoCoords();
+  const { owner, repo } = params?.coords ?? getRepoCoords();
   const state = params?.state ?? "all";
   const perPage = params?.perPage ?? 30;
 
-  // Fetch open + closed separately and merge. A single state=all call can
-  // miss very recent PRs with some fine-grained tokens / API edge cases.
   if (state === "all") {
     const [open, closed] = await Promise.all([
       octokit.paginate(octokit.pulls.list, {
@@ -95,9 +136,31 @@ export async function listPulls(params?: {
   });
 }
 
-export async function getDiff(prNumber: number): Promise<string> {
+/** Fetch the hardcoded demo PR catalog (both repos). Always mark as open. */
+export async function listDemoPulls() {
+  const results = await Promise.all(
+    DEMO_TARGETS.map(async (target) => {
+      try {
+        const pull = await getPR(target.number, {
+          owner: target.owner,
+          repo: target.repo,
+        });
+        return { target, pull, error: null as string | null };
+      } catch (err) {
+        return {
+          target,
+          pull: null,
+          error: err instanceof Error ? err.message : "Failed to load PR",
+        };
+      }
+    })
+  );
+  return results;
+}
+
+export async function getDiff(prNumber: number, coords?: RepoRef): Promise<string> {
   const octokit = getOctokit();
-  const { owner, repo } = getRepoCoords();
+  const { owner, repo } = coords ?? getRepoCoords();
   const { data } = await octokit.request(
     "GET /repos/{owner}/{repo}/pulls/{pull_number}",
     {
@@ -112,9 +175,9 @@ export async function getDiff(prNumber: number): Promise<string> {
   return typeof data === "string" ? data : String(data);
 }
 
-export async function getFiles(prNumber: number) {
+export async function getFiles(prNumber: number, coords?: RepoRef) {
   const octokit = getOctokit();
-  const { owner, repo } = getRepoCoords();
+  const { owner, repo } = coords ?? getRepoCoords();
   const files = await octokit.paginate(octokit.pulls.listFiles, {
     owner,
     repo,
@@ -132,6 +195,7 @@ export async function createReview(params: {
   prNumber: number;
   body: string;
   event: SafeReviewEvent;
+  coords?: RepoRef;
 }) {
   if (params.event !== "COMMENT" && params.event !== "REQUEST_CHANGES") {
     throw new Error(
@@ -140,9 +204,8 @@ export async function createReview(params: {
   }
 
   const octokit = getOctokit();
-  const { owner, repo } = getRepoCoords();
+  const { owner, repo } = params.coords ?? getRepoCoords();
 
-  // Explicit literal — never pass APPROVE through to GitHub
   const safeEvent: SafeReviewEvent =
     params.event === "REQUEST_CHANGES" ? "REQUEST_CHANGES" : "COMMENT";
 

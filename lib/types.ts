@@ -37,6 +37,8 @@ export interface PRMeta {
   additions: number;
   deletions: number;
   changed_files: number;
+  owner: string;
+  repo: string;
 }
 
 export type PullRequestState = "open" | "closed" | "all";
@@ -44,6 +46,7 @@ export type PullRequestState = "open" | "closed" | "all";
 export interface PRListItem {
   number: number;
   title: string;
+  /** Always "open" in the demo dashboard (hardcoded). */
   state: "open" | "closed";
   draft: boolean;
   user: string | null;
@@ -54,6 +57,8 @@ export interface PRListItem {
   changed_files?: number;
   labels: string[];
   mergeable_state?: string | null;
+  owner: string;
+  repo: string;
 }
 
 export interface PRListResponse {
@@ -87,6 +92,8 @@ export interface CommentResponse {
 
 export interface ReviewRequest {
   prNumber: number;
+  owner?: string;
+  repo?: string;
   verdicts: CardVerdict[];
   body?: string;
 }

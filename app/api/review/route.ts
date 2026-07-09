@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createReview, type SafeReviewEvent } from "@/lib/github";
+import { createReview, resolveRepo, type SafeReviewEvent } from "@/lib/github";
 import type { ReviewRequest, ReviewResponse } from "@/lib/types";
 
 export const maxDuration = 30;
@@ -81,11 +81,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const coords = resolveRepo({
+      owner: body.owner,
+      repo: body.repo,
+    });
+
     const { body: reviewBody, event } = buildReviewBody(body);
     const review = await createReview({
       prNumber,
       body: reviewBody,
       event,
+      coords,
     });
 
     const payload: ReviewResponse = {
