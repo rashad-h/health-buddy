@@ -5,7 +5,7 @@ export type SafeReviewEvent = "COMMENT" | "REQUEST_CHANGES";
 function getConfig() {
   const token = process.env.GITHUB_TOKEN;
   const owner = process.env.GITHUB_OWNER || "rashad-h";
-  const repo = process.env.GITHUB_REPO || "ExpenseTracker";
+  const repo = process.env.GITHUB_REPO || "health-buddy";
   if (!token) {
     throw new Error("GITHUB_TOKEN is not configured");
   }
@@ -47,7 +47,6 @@ export async function getDiff(prNumber: number): Promise<string> {
       },
     }
   );
-  // Diff media type returns a raw string
   return typeof data === "string" ? data : String(data);
 }
 
@@ -73,18 +72,24 @@ export async function createReview(params: {
   event: SafeReviewEvent;
 }) {
   if (params.event !== "COMMENT" && params.event !== "REQUEST_CHANGES") {
-    throw new Error("Unsafe review event blocked — only COMMENT or REQUEST_CHANGES allowed");
+    throw new Error(
+      "Unsafe review event blocked — only COMMENT or REQUEST_CHANGES allowed"
+    );
   }
 
   const octokit = getOctokit();
   const { owner, repo } = getRepoCoords();
+
+  // Explicit literal — never pass APPROVE through to GitHub
+  const safeEvent: SafeReviewEvent =
+    params.event === "REQUEST_CHANGES" ? "REQUEST_CHANGES" : "COMMENT";
 
   const { data } = await octokit.pulls.createReview({
     owner,
     repo,
     pull_number: params.prNumber,
     body: params.body,
-    event: params.event,
+    event: safeEvent,
   });
 
   return data;

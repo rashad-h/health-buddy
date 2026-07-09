@@ -50,13 +50,18 @@ export default function VoiceSheet({
   const [error, setError] = useState<string | null>(null);
   const [speechSupported, setSpeechSupported] = useState(false);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const finalsRef = useRef("");
 
   useEffect(() => {
     setSpeechSupported(!!getSpeechRecognition());
   }, []);
 
   const stopListening = useCallback(() => {
-    recognitionRef.current?.stop();
+    try {
+      recognitionRef.current?.stop();
+    } catch {
+      /* ignore */
+    }
     setListening(false);
   }, []);
 
@@ -64,6 +69,7 @@ export default function VoiceSheet({
     if (!open) {
       stopListening();
       setTranscript("");
+      finalsRef.current = "";
       setError(null);
       setRewriting(false);
     }
@@ -72,39 +78,47 @@ export default function VoiceSheet({
   const startListening = () => {
     const Ctor = getSpeechRecognition();
     if (!Ctor) {
-      setError("Speech recognition is not supported in this browser. Type instead.");
+      setError(
+        "Speech recognition is not supported in this browser. Type instead."
+      );
       return;
     }
     setError(null);
+    finalsRef.current = transcript.trim() ? `${transcript.trim()} ` : "";
     const recognition = new Ctor();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
     recognition.onresult = (event) => {
-      let finalText = "";
       let interim = "";
-      for (let i = 0; i < event.results.length; i++) {
+      let newlyFinal = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        if (result.isFinal) finalText += result[0].transcript;
+        if (result.isFinal) newlyFinal += result[0].transcript;
         else interim += result[0].transcript;
       }
-      setTranscript((prev) => {
-        // Prefer accumulating finals from this session
-        const base = prev;
-        const next = (finalText || interim).trim();
-        return next || base;
-      });
-      if (finalText.trim()) setTranscript(finalText.trim());
-      else if (interim.trim()) setTranscript(interim.trim());
+      if (newlyFinal) {
+        finalsRef.current += newlyFinal;
+      }
+      setTranscript((finalsRef.current + interim).trim());
     };
     recognition.onerror = (event) => {
-      setError(event.error === "not-allowed" ? "Microphone permission denied" : event.error);
+      if (event.error === "aborted") return;
+      setError(
+        event.error === "not-allowed"
+          ? "Microphone permission denied"
+          : `Speech error: ${event.error}`
+      );
       setListening(false);
     };
     recognition.onend = () => setListening(false);
     recognitionRef.current = recognition;
-    recognition.start();
-    setListening(true);
+    try {
+      recognition.start();
+      setListening(true);
+    } catch {
+      setError("Could not start microphone");
+    }
   };
 
   const handleRewriteAndSubmit = async () => {
@@ -136,18 +150,25 @@ export default function VoiceSheet({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-ink/40 backdrop-blur-sm"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
       <div
-        className="w-full max-w-[420px] rounded-t-2xl bg-page border border-border shadow-xl p-5 pb-8 animate-slide-up"
+        className="w-full max-w-[420px] rounded-t-2xl bg-page border border-border shadow-xl p-5 pb-[max(2rem,env(safe-area-inset-bottom))] animate-slide-up"
         role="dialog"
+        aria-modal="true"
         aria-label="Voice comment"
       >
+        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
         <div className="flex items-center justify-between mb-3">
           <h2 className="font-display text-lg text-ink">Hold feedback</h2>
           <button
             type="button"
             onClick={onClose}
-            className="text-sm text-ink/50 hover:text-ink"
+            className="text-sm text-ink/50 hover:text-ink px-2 py-1"
           >
             Close
           </button>
@@ -159,26 +180,29 @@ export default function VoiceSheet({
             type="button"
             onClick={listening ? stopListening : startListening}
             className={`w-full mb-3 h-12 rounded-xl font-medium transition-colors ${
-              listening
-                ? "bg-hold text-white"
-                : "bg-accent text-white"
+              listening ? "bg-hold text-white animate-pulse" : "bg-accent text-white"
             }`}
           >
-            {listening ? "Stop listening" : "Hold to speak"}
+            {listening ? "Listening… tap to stop" : "Speak feedback"}
           </button>
         )}
 
         <textarea
           value={transcript}
-          onChange={(e) => setTranscript(e.target.value)}
-          placeholder="Or type your objection…"
+          onChange={(e) => {
+            setTranscript(e.target.value);
+            finalsRef.current = e.target.value;
+          }}
+          placeholder={
+            speechSupported
+              ? "Or type your objection…"
+              : "Type your objection…"
+          }
           rows={4}
-          className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none"
+          className="w-full rounded-xl border border-border bg-white px-3 py-2 text-sm text-ink placeholder:text-ink/40 focus:outline-none focus:ring-2 focus:ring-accent/30 resize-none font-sans"
         />
 
-        {error && (
-          <p className="mt-2 text-sm text-hold">{error}</p>
-        )}
+        {error && <p className="mt-2 text-sm text-hold">{error}</p>}
 
         <button
           type="button"

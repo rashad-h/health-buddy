@@ -85,6 +85,11 @@ function normalizeCards(raw: unknown): ReviewCard[] {
   });
 }
 
+function clipPatch(patch: string, maxLines = 36, maxChars = 1800): string {
+  const lines = patch.split("\n").slice(0, maxLines).join("\n");
+  return lines.length > maxChars ? `${lines.slice(0, maxChars)}\n…` : lines;
+}
+
 function attachPatchesFromFiles(
   cards: ReviewCard[],
   files: Array<{ filename: string; patch?: string | null }>
@@ -95,17 +100,28 @@ function attachPatchesFromFiles(
 
   return cards.map((card) => {
     if (card.kind !== "decision") return card;
-    if (card.patch) return card;
+
+    if (card.patch?.trim()) {
+      return { ...card, patch: clipPatch(card.patch.trim(), 40, 2200) };
+    }
+
     const snippets: string[] = [];
-    for (const path of card.files.slice(0, 2)) {
+    for (const path of card.files.slice(0, 3)) {
       const patch = byFile.get(path);
       if (patch) {
-        const clipped = patch.split("\n").slice(0, 40).join("\n");
-        snippets.push(`--- ${path}\n${clipped}`);
+        snippets.push(`--- ${path}\n${clipPatch(patch)}`);
+      }
+    }
+    if (!snippets.length) {
+      for (const f of files) {
+        if (f.patch) {
+          snippets.push(`--- ${f.filename}\n${clipPatch(f.patch)}`);
+          break;
+        }
       }
     }
     if (!snippets.length) return card;
-    return { ...card, patch: snippets.join("\n\n").slice(0, 2500) };
+    return { ...card, patch: snippets.join("\n\n").slice(0, 2800) };
   });
 }
 

@@ -27,7 +27,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Env
 
-See `.env.example`. Token needs PR read/write + contents read.
+See `.env.example`. Defaults: `rashad-h/health-buddy`. Token needs PR read/write + contents read.
 
 ## Scripts
 
