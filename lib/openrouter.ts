@@ -7,31 +7,51 @@ export function getOpenRouterModel(): string {
 export async function chatCompletion(
   system: string,
   user: string,
-  options?: { temperature?: number; maxTokens?: number }
+  options?: { temperature?: number; maxTokens?: number; timeoutMs?: number }
 ): Promise<string> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is not configured");
   }
 
-  const res = await fetch(OPENROUTER_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-      "HTTP-Referer": "https://swipe-to-ship.local",
-      "X-Title": "Swipe-to-Ship",
-    },
-    body: JSON.stringify({
-      model: getOpenRouterModel(),
-      temperature: options?.temperature ?? 0.2,
-      max_tokens: options?.maxTokens ?? 4096,
-      messages: [
-        { role: "system", content: system },
-        { role: "user", content: user },
-      ],
-    }),
-  });
+  const timeoutMs = options?.timeoutMs ?? 45_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  let res: Response;
+  try {
+    res = await fetch(OPENROUTER_URL, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": "https://health-buddy-taupe.vercel.app",
+        "X-Title": "Swipe-to-Ship",
+      },
+      body: JSON.stringify({
+        model: getOpenRouterModel(),
+        temperature: options?.temperature ?? 0.2,
+        max_tokens: options?.maxTokens ?? 2500,
+        // DeepSeek V4 Flash can spend the whole budget on hidden reasoning.
+        // Force non-thinking mode for hackathon latency.
+        reasoning: { effort: "none" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      }),
+    });
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error(
+        `OpenRouter timed out after ${Math.round(timeoutMs / 1000)}s. Try again — cached loads are instant.`
+      );
+    }
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
