@@ -1,8 +1,8 @@
 'use strict';
 
 const jwt = require('jsonwebtoken');
-const { JWT_SECRET } = require('../config/constants');
 const logger = require('../utils/logger');
+const { JWT_SECRET } = require('../config/constants');
 
 function requireAuth(req, res, next) {
   const header = req.headers.authorization || '';
@@ -22,4 +22,6 @@ function requireAuth(req, res, next) {
   }
 }
 
-module.exports = { requireAuth };
+module.exports = {
+  requireAuth,
+};

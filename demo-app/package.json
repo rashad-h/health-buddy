@@ -1,12 +1,13 @@
 {
   "name": "health-buddy-api",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Health Buddy payments and auth API",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "lint": "echo \"no linter configured\""
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

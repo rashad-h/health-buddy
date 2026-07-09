@@ -1,5 +1,6 @@
 'use strict';
 
+// Basic email shape check — not a full RFC 5322 validator.
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function isValidEmail(email) {

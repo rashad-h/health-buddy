@@ -2,9 +2,13 @@
 
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
-const { PAYMENT_MAX_CENTS, PAYMENT_MIN_CENTS, STRIPE_SECRET_KEY } = require('../config/constants');
-const { requireAuth } = require('../middleware/auth');
 const logger = require('../utils/logger');
+const { requireAuth } = require('../middleware/auth');
+const {
+  MAX_CHARGE_AMOUNT_CENTS,
+  PAYMENT_MIN_CENTS,
+  STRIPE_SECRET_KEY,
+} = require('../config/constants');
 
 const router = express.Router();
 
@@ -14,11 +18,11 @@ router.post('/charge', requireAuth, async (req, res) => {
   if (!Number.isInteger(amountCents)) {
     return res.status(400).json({ error: 'invalid_amount' });
   }
-  if (amountCents < PAYMENT_MIN_CENTS || amountCents > PAYMENT_MAX_CENTS) {
+  if (amountCents < PAYMENT_MIN_CENTS || amountCents > MAX_CHARGE_AMOUNT_CENTS) {
     return res.status(400).json({
       error: 'amount_out_of_range',
       min: PAYMENT_MIN_CENTS,
-      max: PAYMENT_MAX_CENTS,
+      max: MAX_CHARGE_AMOUNT_CENTS,
     });
   }
   if (typeof currency !== 'string' || currency.length !== 3) {

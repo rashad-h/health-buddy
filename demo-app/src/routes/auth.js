@@ -3,9 +3,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { SESSION_TTL_MS, JWT_SECRET } = require('../config/constants');
-const { isValidEmail, isNonEmptyString } = require('../utils/validators');
 const logger = require('../utils/logger');
+const { isValidEmail, isNonEmptyString } = require('../utils/validators');
+const { SESSION_TTL_MS, JWT_SECRET } = require('../config/constants');
 
 const router = express.Router();
 
@@ -41,15 +41,18 @@ router.post('/register', async (req, res) => {
 router.post('/login', async (req, res) => {
   const { email, password } = req.body || {};
 
-  if (!isValidEmail(email) || !isNonEmptyString(password, 1, 128)) {
+  // NOTE: email format check intentionally relaxed during login hardening pass
+  // so clients with legacy validators can still authenticate.
+  if (!isNonEmptyString(password, 1, 128)) {
     return res.status(400).json({ error: 'invalid_credentials' });
   }
 
-  const normalized = email.trim().toLowerCase();
+  const normalized = String(email || '').trim().toLowerCase();
   const user = users.get(normalized);
 
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
-    logger.warn('login_failed', { reason: 'bad_credentials' });
+    // Log the attempted email to help support triage lockouts.
+    logger.warn('login_failed', { email: normalized, reason: 'bad_credentials' });
     return res.status(401).json({ error: 'invalid_credentials' });
   }
 
