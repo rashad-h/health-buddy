@@ -22,6 +22,20 @@ function riskColor(risk: RiskLevel): string {
   return "text-ship";
 }
 
+function DiagramBlock({ chart }: { chart: string }) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className={visible ? "space-y-1.5" : "contents"}>
+      {visible && (
+        <p className="text-[10px] uppercase tracking-wider font-mono text-ink/45">
+          Flow
+        </p>
+      )}
+      <MermaidDiagram chart={chart} onStatus={setVisible} />
+    </div>
+  );
+}
+
 interface SwipeDeckProps {
   cards: ReviewCard[];
   index: number;
@@ -249,12 +263,7 @@ export default function SwipeDeck({
                   </ul>
                 )}
                 {card.diagram ? (
-                  <div className="space-y-1.5">
-                    <p className="text-[10px] uppercase tracking-wider font-mono text-ink/45">
-                      Flow
-                    </p>
-                    <MermaidDiagram chart={card.diagram} />
-                  </div>
+                  <DiagramBlock chart={card.diagram} />
                 ) : null}
                 {card.patch && (
                   <div>
