@@ -20,7 +20,7 @@ Reviews may only use GitHub events **COMMENT** or **REQUEST_CHANGES**. The app n
 
 ```bash
 cp .env.example .env.local
-# fill OPENROUTER_API_KEY and GITHUB_TOKEN
+# fill OPENROUTER_API_KEY and GITHUB_TOKEN (ExpenseTracker access)
 npm install
 npm run dev
 ```
@@ -32,7 +32,7 @@ deck, then use **PRs** in the review header to return to the list.
 ## Env
 
 See `.env.example`. Required: `OPENROUTER_API_KEY` and `GITHUB_TOKEN`.
-This app is hosted in health-buddy, but reviews target `rashad-h/ExpenseTracker` by default. Token needs PR read/write + contents read.
+This app is hosted in health-buddy, but the review target is **hardcoded** to `rashad-h/ExpenseTracker`. Token needs PR read/write + contents read on that repo.
 `GITHUB_PR_NUMBER` is optional and only acts as a fallback if `/api/pr` is
 called directly without `?pr=<number>`.
 

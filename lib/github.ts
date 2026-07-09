@@ -10,14 +10,16 @@ export class PRNumberError extends Error {
   }
 }
 
+/** Hardcoded review target — this app is hosted in health-buddy but always reviews ExpenseTracker. */
+const GITHUB_OWNER = "rashad-h";
+const GITHUB_REPO = "ExpenseTracker";
+
 function getConfig() {
   const token = process.env.GITHUB_TOKEN;
-  const owner = process.env.GITHUB_OWNER || "rashad-h";
-  const repo = process.env.GITHUB_REPO || "ExpenseTracker";
   if (!token) {
     throw new Error("GITHUB_TOKEN is not configured");
   }
-  return { token, owner, repo };
+  return { token, owner: GITHUB_OWNER, repo: GITHUB_REPO };
 }
 
 export function getOctokit(): Octokit {
