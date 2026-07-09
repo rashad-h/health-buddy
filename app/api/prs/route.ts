@@ -12,7 +12,7 @@ const VALID_STATES = new Set<PullRequestState>(["open", "closed", "all"]);
 const DEFAULT_LIMIT = 30;
 
 function parseState(value: string | null): PullRequestState {
-  if (!value) return "open";
+  if (!value) return "all";
   if (VALID_STATES.has(value as PullRequestState)) {
     return value as PullRequestState;
   }

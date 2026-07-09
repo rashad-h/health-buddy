@@ -92,7 +92,7 @@ export default function ReviewApp() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await fetch("/api/prs");
+      const res = await fetch("/api/prs?state=all");
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load PRs");
       setPrList(json as PRListResponse);
@@ -324,7 +324,7 @@ export default function ReviewApp() {
           {!listLoading && !listError && prList?.prs.length === 0 && (
             <div className="flex-1 flex flex-col items-center justify-center gap-2 text-center px-2">
               <p className="font-display text-2xl text-ink">
-                No open pull requests
+                No pull requests found
               </p>
               <p className="text-sm text-ink/55">
                 New PRs in {repoName} will appear here.
