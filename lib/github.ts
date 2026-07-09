@@ -13,7 +13,7 @@ export class PRNumberError extends Error {
 function getConfig() {
   const token = process.env.GITHUB_TOKEN;
   const owner = process.env.GITHUB_OWNER || "rashad-h";
-  const repo = process.env.GITHUB_REPO || "health-buddy";
+  const repo = process.env.GITHUB_REPO || "ExpenseTracker";
   if (!token) {
     throw new Error("GITHUB_TOKEN is not configured");
   }

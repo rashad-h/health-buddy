@@ -32,7 +32,7 @@ deck, then use **PRs** in the review header to return to the list.
 ## Env
 
 See `.env.example`. Required: `OPENROUTER_API_KEY` and `GITHUB_TOKEN`.
-Defaults stay pointed at `rashad-h/health-buddy`. Token needs PR read/write + contents read.
+This app is hosted in health-buddy, but reviews target `rashad-h/ExpenseTracker` by default. Token needs PR read/write + contents read.
 `GITHUB_PR_NUMBER` is optional and only acts as a fallback if `/api/pr` is
 called directly without `?pr=<number>`.
 
