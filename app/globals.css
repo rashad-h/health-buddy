@@ -1,0 +1,86 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --ink: #101312;
+  --page: #fafaf7;
+  --accent: #0e5b4a;
+  --ship: #1e9e6a;
+  --hold: #d64545;
+  --border: #e4e4dc;
+  --background: var(--page);
+  --foreground: var(--ink);
+}
+
+html,
+body {
+  height: 100%;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+body {
+  color: var(--ink);
+  background:
+    radial-gradient(120% 80% at 50% -20%, rgba(14, 91, 74, 0.08), transparent 55%),
+    linear-gradient(180deg, #f3f4ee 0%, var(--page) 40%, #f7f6f1 100%);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.35s ease-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.28s ease-out;
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #ebebe3 0%,
+    #f5f5ef 40%,
+    #ebebe3 80%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
