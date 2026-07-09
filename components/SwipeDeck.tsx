@@ -1,11 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, useMotionValue, useTransform, type PanInfo } from "framer-motion";
+import { useEffect, useRef, useState } from "react";
+import {
+  animate,
+  motion,
+  useMotionValue,
+  useReducedMotion,
+  useTransform,
+  type PanInfo,
+} from "framer-motion";
 import MermaidDiagram from "@/components/MermaidDiagram";
 import type { ReviewCard, RiskLevel, Verdict } from "@/lib/types";
 
-const SWIPE_THRESHOLD = 110;
+const SWIPE_DISTANCE = 100;
+const SWIPE_VELOCITY = 650;
+const EXIT_X = 480;
 
 function riskColor(risk: RiskLevel): string {
   if (risk === "high") return "text-hold";
@@ -28,13 +37,22 @@ export default function SwipeDeck({
 }: SwipeDeckProps) {
   const card = cards[index];
   const x = useMotionValue(0);
-  const rotate = useTransform(x, [-200, 200], [-12, 12]);
-  const shipOpacity = useTransform(x, [40, 140], [0, 1]);
-  const holdOpacity = useTransform(x, [-140, -40], [1, 0]);
+  const reduceMotion = useReducedMotion();
+  const rotate = useTransform(
+    x,
+    [-220, 0, 220],
+    reduceMotion ? [0, 0, 0] : [-10, 0, 10]
+  );
+  const shipOpacity = useTransform(x, [28, 110], [0, 1]);
+  const holdOpacity = useTransform(x, [-110, -28], [1, 0]);
   const [showCode, setShowCode] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
 
   useEffect(() => {
     setShowCode(false);
+    setBusy(false);
+    busyRef.current = false;
     x.set(0);
   }, [index, x]);
 
@@ -43,15 +61,85 @@ export default function SwipeDeck({
   const title =
     card.kind === "decision" ? card.title : card.title || "Housekeeping";
 
+  const haptic = () => {
+    try {
+      navigator.vibrate?.(8);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const flyOff = async (direction: 1 | -1, after: () => void) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    haptic();
+
+    const target = direction * (typeof window !== "undefined" ? window.innerWidth * 1.15 : EXIT_X);
+    await animate(x, target, {
+      type: "spring",
+      stiffness: reduceMotion ? 500 : 280,
+      damping: reduceMotion ? 40 : 28,
+      mass: 0.85,
+      velocity: direction * 1200,
+    }).finished;
+
+    after();
+  };
+
+  const snapBack = () => {
+    void animate(x, 0, {
+      type: "spring",
+      stiffness: 420,
+      damping: 32,
+      mass: 0.7,
+    });
+  };
+
   const handleDragEnd = (_: unknown, info: PanInfo) => {
-    if (info.offset.x > SWIPE_THRESHOLD) {
-      onVerdict(card.id, "approve");
+    if (busyRef.current) return;
+
+    const traveled = info.offset.x;
+    const flicked = info.velocity.x;
+    const goRight =
+      traveled > SWIPE_DISTANCE || flicked > SWIPE_VELOCITY;
+    const goLeft =
+      traveled < -SWIPE_DISTANCE || flicked < -SWIPE_VELOCITY;
+
+    if (goRight) {
+      void flyOff(1, () => onVerdict(card.id, "approve"));
       return;
     }
-    if (info.offset.x < -SWIPE_THRESHOLD) {
-      onRejectNeedComment(card.id, title);
-      x.set(0);
+    if (goLeft) {
+      void flyOff(-1, () => {
+        x.set(0);
+        busyRef.current = false;
+        setBusy(false);
+        onRejectNeedComment(card.id, title);
+      });
+      return;
     }
+    snapBack();
+  };
+
+  const onHold = () => {
+    if (busyRef.current) return;
+    void flyOff(-1, () => {
+      x.set(0);
+      busyRef.current = false;
+      setBusy(false);
+      onRejectNeedComment(card.id, title);
+    });
+  };
+
+  const onShip = () => {
+    if (busyRef.current) return;
+    void flyOff(1, () => onVerdict(card.id, "approve"));
+  };
+
+  const onSkip = () => {
+    if (busyRef.current) return;
+    void flyOff(1, () => onVerdict(card.id, "skip"));
   };
 
   return (
@@ -73,27 +161,43 @@ export default function SwipeDeck({
 
       <div className="relative flex-1 min-h-[380px] flex items-stretch">
         {cards[index + 1] && (
-          <div className="absolute inset-x-3 top-3 bottom-0 rounded-2xl border border-border bg-white/70 scale-[0.97]" />
+          <div
+            aria-hidden
+            className="absolute inset-x-3 top-3 bottom-0 rounded-2xl border border-border bg-white/80 scale-[0.96] shadow-[0_4px_16px_rgba(16,19,18,0.04)]"
+          />
         )}
 
         <motion.article
           key={card.id}
-          style={{ x, rotate }}
-          drag="x"
+          style={{
+            x,
+            rotate,
+            willChange: "transform",
+            touchAction: "pan-y",
+          }}
+          drag={busy ? false : "x"}
+          dragDirectionLock
+          dragMomentum={false}
+          dragElastic={0.18}
           dragConstraints={{ left: 0, right: 0 }}
-          dragElastic={0.9}
+          dragTransition={{
+            bounceStiffness: 380,
+            bounceDamping: 28,
+            power: 0.2,
+            timeConstant: 180,
+          }}
           onDragEnd={handleDragEnd}
-          className="relative z-10 flex flex-col w-full rounded-2xl border border-border bg-white shadow-[0_12px_40px_rgba(16,19,18,0.08)] overflow-hidden"
+          className="relative z-10 flex flex-col w-full rounded-2xl border border-border bg-white shadow-[0_12px_40px_rgba(16,19,18,0.08)] overflow-hidden select-none"
         >
           <motion.div
             style={{ opacity: shipOpacity }}
-            className="pointer-events-none absolute top-5 left-5 z-20 -rotate-12 rounded border-2 border-ship px-3 py-1 text-sm font-bold tracking-widest text-ship bg-ship/10"
+            className="pointer-events-none absolute top-5 left-5 z-20 -rotate-12 rounded border-2 border-ship px-3 py-1 font-display text-lg font-bold tracking-widest text-ship bg-ship/10"
           >
             SHIP
           </motion.div>
           <motion.div
             style={{ opacity: holdOpacity }}
-            className="pointer-events-none absolute top-5 right-5 z-20 rotate-12 rounded border-2 border-hold px-3 py-1 text-sm font-bold tracking-widest text-hold bg-hold/10"
+            className="pointer-events-none absolute top-5 right-5 z-20 rotate-12 rounded border-2 border-hold px-3 py-1 font-display text-lg font-bold tracking-widest text-hold bg-hold/10"
           >
             HOLD
           </motion.div>
@@ -168,24 +272,27 @@ export default function SwipeDeck({
             <button
               type="button"
               aria-label="Hold"
-              onClick={() => onRejectNeedComment(card.id, title)}
-              className="h-12 rounded-xl border border-hold/30 text-hold text-xl font-semibold active:scale-95 transition-transform"
+              disabled={busy}
+              onClick={onHold}
+              className="h-12 rounded-xl border border-hold/30 text-hold text-xl font-semibold active:scale-95 transition-transform disabled:opacity-40"
             >
               ✕
             </button>
             <button
               type="button"
               aria-label="Skip"
-              onClick={() => onVerdict(card.id, "skip")}
-              className="h-12 rounded-xl border border-border text-ink/45 text-sm font-medium active:scale-95 transition-transform"
+              disabled={busy}
+              onClick={onSkip}
+              className="h-12 rounded-xl border border-border text-ink/45 text-sm font-medium active:scale-95 transition-transform disabled:opacity-40"
             >
               Skip
             </button>
             <button
               type="button"
               aria-label="Ship"
-              onClick={() => onVerdict(card.id, "approve")}
-              className="h-12 rounded-xl bg-ship text-white text-xl font-semibold active:scale-95 transition-transform"
+              disabled={busy}
+              onClick={onShip}
+              className="h-12 rounded-xl bg-ship text-white text-xl font-semibold active:scale-95 transition-transform disabled:opacity-40"
             >
               ✓
             </button>
