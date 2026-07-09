@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDiff, getFiles, getPR, resolvePRNumber } from "@/lib/github";
-import { chatCompletion, parseJsonWithRetryPrep, stripJsonFences } from "@/lib/openrouter";
+import {
+  getDiff,
+  getFiles,
+  getPR,
+  PRNumberError,
+  resolvePRNumber,
+} from "@/lib/github";
+import {
+  chatCompletion,
+  parseJsonWithRetryPrep,
+  stripJsonFences,
+} from "@/lib/openrouter";
 import { CARD_GENERATION_SYSTEM_PROMPT } from "@/lib/prompts";
 import type {
   DecisionCard,
@@ -214,6 +224,7 @@ ${diffClipped}`;
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to load PR review cards";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = err instanceof PRNumberError ? 400 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

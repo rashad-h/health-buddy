@@ -187,6 +187,12 @@ export default function VoiceSheet({
           </button>
         )}
 
+        <p className="mb-2 text-xs text-ink/45">
+          {speechSupported
+            ? "Use SpeechRecognition or type a fallback comment below."
+            : "SpeechRecognition is unavailable here; type your feedback below."}
+        </p>
+
         <textarea
           value={transcript}
           onChange={(e) => {

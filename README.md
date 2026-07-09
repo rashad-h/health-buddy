@@ -1,6 +1,8 @@
 # Swipe-to-Ship
 
-Mobile web app for reviewing GitHub PRs as swipeable decision cards. Built for a hackathon demo.
+This repo is Swipe-to-Ship: a mobile web app for reviewing GitHub PRs as swipeable decision cards. Built for a hackathon demo.
+
+The demo PR is the PR for branch `demo/security-hardening-fb6c` in this same repository.
 
 ## Stack
 
@@ -18,7 +20,7 @@ Reviews may only use GitHub events **COMMENT** or **REQUEST_CHANGES**. The app n
 
 ```bash
 cp .env.example .env.local
-# fill OPENROUTER_API_KEY, GITHUB_TOKEN, GITHUB_PR_NUMBER
+# fill OPENROUTER_API_KEY, GITHUB_TOKEN, and GITHUB_PR_NUMBER
 npm install
 npm run dev
 ```
@@ -27,7 +29,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Env
 
-See `.env.example`. Defaults: `rashad-h/health-buddy`. Token needs PR read/write + contents read.
+See `.env.example`. Required: `OPENROUTER_API_KEY`, `GITHUB_TOKEN`, and `GITHUB_PR_NUMBER`.
+Defaults stay pointed at `rashad-h/health-buddy`. Token needs PR read/write + contents read.
 
 ## Scripts
 

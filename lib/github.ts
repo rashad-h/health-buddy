@@ -2,6 +2,13 @@ import { Octokit } from "@octokit/rest";
 
 export type SafeReviewEvent = "COMMENT" | "REQUEST_CHANGES";
 
+export class PRNumberError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "PRNumberError";
+  }
+}
+
 function getConfig() {
   const token = process.env.GITHUB_TOKEN;
   const owner = process.env.GITHUB_OWNER || "rashad-h";
@@ -96,17 +103,27 @@ export async function createReview(params: {
 }
 
 export function resolvePRNumber(override?: string | null): number {
-  if (override) {
-    const n = Number(override);
+  const requested = override?.trim();
+  if (requested) {
+    const n = Number(requested);
     if (!Number.isFinite(n) || n <= 0) {
-      throw new Error("Invalid PR number");
+      throw new PRNumberError(
+        "Invalid PR number. Pass ?pr=<number> with a positive integer."
+      );
     }
     return Math.floor(n);
   }
-  const fromEnv = process.env.GITHUB_PR_NUMBER;
+  const fromEnv = process.env.GITHUB_PR_NUMBER?.trim();
   if (fromEnv) {
     const n = Number(fromEnv);
-    if (Number.isFinite(n) && n > 0) return Math.floor(n);
+    if (Number.isFinite(n) && n > 0) {
+      return Math.floor(n);
+    }
+    throw new PRNumberError(
+      "Invalid GITHUB_PR_NUMBER. Pass ?pr=<number> or set GITHUB_PR_NUMBER to a positive integer."
+    );
   }
-  throw new Error("No PR number provided — set GITHUB_PR_NUMBER or pass ?pr=");
+  throw new PRNumberError(
+    "No PR number provided. Pass ?pr=<number> or set GITHUB_PR_NUMBER in the environment."
+  );
 }

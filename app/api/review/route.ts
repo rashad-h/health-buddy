@@ -57,7 +57,16 @@ function buildReviewBody(req: ReviewRequest): { body: string; event: SafeReviewE
 
 export async function POST(req: NextRequest) {
   try {
-    const body = (await req.json()) as ReviewRequest;
+    let body: ReviewRequest;
+    try {
+      body = (await req.json()) as ReviewRequest;
+    } catch {
+      return NextResponse.json(
+        { error: "Request body must be valid JSON" },
+        { status: 400 }
+      );
+    }
+
     const prNumber = Number(body.prNumber);
     if (!Number.isFinite(prNumber) || prNumber <= 0) {
       return NextResponse.json(
