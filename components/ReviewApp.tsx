@@ -49,16 +49,14 @@ function formatRelativeTime(value: string): string {
   return "updated just now";
 }
 
-function statusLabel(pr: PRListItem): string {
-  if (pr.draft) return "Draft";
-  return pr.state === "open" ? "Open" : "Closed";
+function statusLabel(_pr?: PRListItem): string {
+  void _pr;
+  return "Open";
 }
 
-function statusClass(pr: PRListItem): string {
-  if (pr.draft) return "bg-ink/10 text-ink/60";
-  return pr.state === "open"
-    ? "bg-ship/10 text-ship"
-    : "bg-ink/10 text-ink/50";
+function statusClass(_pr?: PRListItem): string {
+  void _pr;
+  return "bg-ship/10 text-ship";
 }
 
 export default function ReviewApp() {
@@ -67,6 +65,8 @@ export default function ReviewApp() {
   const [listLoading, setListLoading] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
   const [selectedPrNumber, setSelectedPrNumber] = useState<number | null>(null);
+  const [selectedOwner, setSelectedOwner] = useState<string | null>(null);
+  const [selectedRepo, setSelectedRepo] = useState<string | null>(null);
   const [data, setData] = useState<PRResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [statusIdx, setStatusIdx] = useState(0);
@@ -92,7 +92,7 @@ export default function ReviewApp() {
     setListLoading(true);
     setListError(null);
     try {
-      const res = await fetch("/api/prs?state=all");
+      const res = await fetch("/api/prs");
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Failed to load PRs");
       setPrList(json as PRListResponse);
@@ -108,34 +108,46 @@ export default function ReviewApp() {
     void loadPRList();
   }, [loadPRList]);
 
-  const loadReview = useCallback(async (prNumber: number, fresh = false) => {
-    setSelectedPrNumber(prNumber);
-    setScreen("loading");
-    setError(null);
-    setResult(null);
-    setVerdicts([]);
-    setIndex(0);
-    setStatusIdx(0);
-    setData(null);
-    try {
-      const params = new URLSearchParams();
-      if (fresh) params.set("fresh", "1");
-      params.set("pr", String(prNumber));
-      const res = await fetch(`/api/pr?${params.toString()}`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Failed to load PR");
-      setData(json as PRResponse);
-      setScreen("deck");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load PR");
+  const loadReview = useCallback(
+    async (
+      prNumber: number,
+      owner: string,
+      repo: string,
+      fresh = false
+    ) => {
+      setSelectedPrNumber(prNumber);
+      setSelectedOwner(owner);
+      setSelectedRepo(repo);
+      setScreen("loading");
+      setError(null);
+      setResult(null);
+      setVerdicts([]);
+      setIndex(0);
+      setStatusIdx(0);
       setData(null);
-      setScreen("deck");
-    }
-  }, []);
+      try {
+        const params = new URLSearchParams();
+        if (fresh) params.set("fresh", "1");
+        params.set("pr", String(prNumber));
+        params.set("owner", owner);
+        params.set("repo", repo);
+        const res = await fetch(`/api/pr?${params.toString()}`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || "Failed to load PR");
+        setData(json as PRResponse);
+        setScreen("deck");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load PR");
+        setData(null);
+        setScreen("deck");
+      }
+    },
+    []
+  );
 
   const selectPR = useCallback(
-    (prNumber: number) => {
-      void loadReview(prNumber);
+    (pr: { number: number; owner: string; repo: string }) => {
+      void loadReview(pr.number, pr.owner, pr.repo);
     },
     [loadReview]
   );
@@ -197,6 +209,8 @@ export default function ReviewApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prNumber: data.pr.number,
+          owner: data.pr.owner,
+          repo: data.pr.repo,
           verdicts: enriched,
         }),
       });
@@ -213,13 +227,17 @@ export default function ReviewApp() {
 
   const resetDeck = () => {
     const prNumber = selectedPrNumber ?? data?.pr.number;
-    if (!prNumber) return;
-    void loadReview(prNumber, true);
+    const owner = selectedOwner ?? data?.pr.owner;
+    const repo = selectedRepo ?? data?.pr.repo;
+    if (!prNumber || !owner || !repo) return;
+    void loadReview(prNumber, owner, repo, true);
   };
 
   const backToList = () => {
     setScreen("list");
     setSelectedPrNumber(null);
+    setSelectedOwner(null);
+    setSelectedRepo(null);
     setData(null);
     setError(null);
     setResult(null);
@@ -233,10 +251,20 @@ export default function ReviewApp() {
   const rejectCount = verdicts.filter((v) => v.verdict === "reject").length;
   const skipCount = verdicts.filter((v) => v.verdict === "skip").length;
   const selectedListItem = useMemo(
-    () => prList?.prs.find((pr) => pr.number === selectedPrNumber),
-    [prList, selectedPrNumber]
+    () =>
+      prList?.prs.find(
+        (pr) =>
+          pr.number === selectedPrNumber &&
+          pr.owner === selectedOwner &&
+          pr.repo === selectedRepo
+      ),
+    [prList, selectedPrNumber, selectedOwner, selectedRepo]
   );
-  const repoName = prList ? `${prList.repo.owner}/${prList.repo.name}` : "";
+  const repoName = selectedListItem
+    ? `${selectedListItem.owner}/${selectedListItem.repo}`
+    : data
+      ? `${data.pr.owner}/${data.pr.repo}`
+      : "ExpenseTracker + health-buddy";
   const inReview = screen !== "list";
 
   return (
@@ -327,7 +355,7 @@ export default function ReviewApp() {
                 No pull requests found
               </p>
               <p className="text-sm text-ink/55">
-                New PRs in {repoName} will appear here.
+                Demo PRs from ExpenseTracker and health-buddy will appear here.
               </p>
             </div>
           )}
@@ -335,12 +363,12 @@ export default function ReviewApp() {
           {!listLoading && !listError && prList && prList.prs.length > 0 && (
             <ul className="space-y-3 overflow-y-auto pb-4">
               {prList.prs.map((pr) => (
-                <li key={pr.number}>
+                <li key={`${pr.owner}/${pr.repo}#${pr.number}`}>
                   <button
                     type="button"
-                    onClick={() => selectPR(pr.number)}
+                    onClick={() => selectPR(pr)}
                     className="w-full rounded-2xl border border-border bg-page/80 px-4 py-3 text-left shadow-sm transition active:scale-[0.99] hover:border-accent/30"
-                    aria-label={`Review pull request ${pr.number}: ${pr.title}`}
+                    aria-label={`Review pull request ${pr.number} in ${pr.repo}: ${pr.title}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <p className="min-w-0 text-sm font-medium leading-snug text-ink">
@@ -358,6 +386,8 @@ export default function ReviewApp() {
                       </span>
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink/45">
+                      <span className="font-mono text-accent/80">{pr.repo}</span>
+                      <span aria-hidden="true">·</span>
                       <span>{pr.user ? `@${pr.user}` : "unknown author"}</span>
                       <span aria-hidden="true">·</span>
                       <span>{formatRelativeTime(pr.updated_at)}</span>
@@ -377,7 +407,7 @@ export default function ReviewApp() {
                     </div>
                     {pr.labels.length > 0 && (
                       <div className="mt-2 flex flex-wrap gap-1">
-                        {pr.labels.slice(0, 3).map((label) => (
+                        {pr.labels.slice(0, 4).map((label) => (
                           <span
                             key={label}
                             className="rounded-full bg-ink/5 px-2 py-0.5 text-[11px] text-ink/45"

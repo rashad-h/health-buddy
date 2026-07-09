@@ -5,6 +5,7 @@ import {
   getPR,
   PRNumberError,
   resolvePRNumber,
+  resolveRepo,
 } from "@/lib/github";
 import {
   chatCompletion,
@@ -24,8 +25,12 @@ export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 type CacheEntry = { at: number; payload: PRResponse };
-const cache = new Map<number, CacheEntry>();
+const cache = new Map<string, CacheEntry>();
 const CACHE_TTL_MS = 10 * 60 * 1000;
+
+function cacheKey(owner: string, repo: string, prNumber: number) {
+  return `${owner}/${repo}#${prNumber}`;
+}
 
 function isDecisionCard(c: Record<string, unknown>): boolean {
   return c.kind === "decision" || (!c.kind && typeof c.title === "string" && !Array.isArray(c.items));
@@ -163,18 +168,23 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const fresh = searchParams.get("fresh") === "1";
     const prNumber = resolvePRNumber(searchParams.get("pr"));
+    const coords = resolveRepo({
+      owner: searchParams.get("owner"),
+      repo: searchParams.get("repo"),
+    });
+    const key = cacheKey(coords.owner, coords.repo, prNumber);
 
     if (!fresh) {
-      const hit = cache.get(prNumber);
+      const hit = cache.get(key);
       if (hit && Date.now() - hit.at < CACHE_TTL_MS) {
         return NextResponse.json({ ...hit.payload, cached: true });
       }
     }
 
     const [pr, diff, files] = await Promise.all([
-      getPR(prNumber),
-      getDiff(prNumber),
-      getFiles(prNumber),
+      getPR(prNumber, coords),
+      getDiff(prNumber, coords),
+      getFiles(prNumber, coords),
     ]);
 
     const fileList = files
@@ -215,10 +225,12 @@ ${diffClipped}`;
       additions: pr.additions,
       deletions: pr.deletions,
       changed_files: pr.changed_files,
+      owner: coords.owner,
+      repo: coords.repo,
     };
 
     const payload: PRResponse = { pr: meta, cards, cached: false };
-    cache.set(prNumber, { at: Date.now(), payload });
+    cache.set(key, { at: Date.now(), payload });
 
     return NextResponse.json(payload);
   } catch (err) {
