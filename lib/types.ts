@@ -39,6 +39,31 @@ export interface PRMeta {
   changed_files: number;
 }
 
+export type PullRequestState = "open" | "closed" | "all";
+
+export interface PRListItem {
+  number: number;
+  title: string;
+  state: "open" | "closed";
+  draft: boolean;
+  user: string | null;
+  updated_at: string;
+  html_url: string;
+  additions: number;
+  deletions: number;
+  changed_files?: number;
+  labels: string[];
+  mergeable_state?: string | null;
+}
+
+export interface PRListResponse {
+  repo: {
+    owner: string;
+    name: string;
+  };
+  prs: PRListItem[];
+}
+
 export interface PRResponse {
   pr: PRMeta;
   cards: ReviewCard[];

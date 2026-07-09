@@ -20,17 +20,21 @@ Reviews may only use GitHub events **COMMENT** or **REQUEST_CHANGES**. The app n
 
 ```bash
 cp .env.example .env.local
-# fill OPENROUTER_API_KEY, GITHUB_TOKEN, and GITHUB_PR_NUMBER
+# fill OPENROUTER_API_KEY and GITHUB_TOKEN
 npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). The home screen lists
+pull requests from the configured repo. Pick one to generate the swipe review
+deck, then use **PRs** in the review header to return to the list.
 
 ## Env
 
-See `.env.example`. Required: `OPENROUTER_API_KEY`, `GITHUB_TOKEN`, and `GITHUB_PR_NUMBER`.
+See `.env.example`. Required: `OPENROUTER_API_KEY` and `GITHUB_TOKEN`.
 Defaults stay pointed at `rashad-h/health-buddy`. Token needs PR read/write + contents read.
+`GITHUB_PR_NUMBER` is optional and only acts as a fallback if `/api/pr` is
+called directly without `?pr=<number>`.
 
 ## Scripts
 

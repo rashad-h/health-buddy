@@ -1,4 +1,5 @@
 import { Octokit } from "@octokit/rest";
+import type { PullRequestState } from "@/lib/types";
 
 export type SafeReviewEvent = "COMMENT" | "REQUEST_CHANGES";
 
@@ -36,6 +37,23 @@ export async function getPR(prNumber: number) {
     owner,
     repo,
     pull_number: prNumber,
+  });
+  return data;
+}
+
+export async function listPulls(params?: {
+  state?: PullRequestState;
+  perPage?: number;
+}) {
+  const octokit = getOctokit();
+  const { owner, repo } = getRepoCoords();
+  const { data } = await octokit.pulls.list({
+    owner,
+    repo,
+    state: params?.state ?? "open",
+    sort: "updated",
+    direction: "desc",
+    per_page: params?.perPage ?? 30,
   });
   return data;
 }
